@@ -11,6 +11,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="scala-sdk-2.13.8" level="application" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.13.10" level="project" />
     <orderEntry type="library" name="Maven: com.typesafe.akka:akka-stream_2.13:2.6.19" level="project" />
     <orderEntry type="library" name="Maven: com.typesafe.akka:akka-actor_2.13:2.6.19" level="project" />
