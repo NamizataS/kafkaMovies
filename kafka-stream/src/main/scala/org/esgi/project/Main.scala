@@ -18,7 +18,7 @@ object Main {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val config: Config = ConfigFactory.load()
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val streams: KafkaStreams = StreamProcessing.run()
     Http()
       .newServerAt("0.0.0.0", 8080)

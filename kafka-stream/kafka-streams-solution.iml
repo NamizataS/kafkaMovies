@@ -7,6 +7,8 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/scala" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/test/scala" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src/test/resources" type="java-test-resource" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
@@ -47,8 +49,22 @@
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.36" level="project" />
     <orderEntry type="library" name="Maven: io.github.azhur:kafka-serde-play-json_2.13:0.8.1" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-simple:2.0.5" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest_2.13:3.0.8" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.scalactic:scalactic_2.13:3.0.8" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.scala-lang.modules:scala-xml_2.13:1.2.0" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-core_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-compatible:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalactic:scalactic_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scala-lang.modules:scala-xml_2.13:2.1.0" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-featurespec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-flatspec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-freespec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-funsuite_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-funspec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-propspec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-refspec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-wordspec_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-diagrams_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-matchers-core_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-shouldmatchers_2.13:3.2.15" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest-mustmatchers_2.13:3.2.15" level="project" />
   </component>
 </module>
