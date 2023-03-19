@@ -10,14 +10,14 @@ import org.apache.kafka.streams.{KafkaStreams, StreamsConfig, Topology}
 import org.esgi.project.ConfigLoader
 import org.esgi.project.streaming.models.{Likes, Views}
 
-import java.util.Properties
+import java.util.{Properties, UUID}
 
 object StreamProcessing extends PlayJsonSupport {
 
   import org.apache.kafka.streams.scala.ImplicitConversions._
   import org.apache.kafka.streams.scala.serialization.Serdes._
 
-  val applicationName = s"kazaamovies-events-stream-app-"
+  val applicationName = s"kazaamovies-events-stream-app-${UUID.randomUUID}"
   private val kafkaProperties = ConfigLoader.loadPropertiesFile("kafka.properties")
   // Topics names
   val viewsTopicName = kafkaProperties.getProperty("views.topic")
@@ -35,9 +35,9 @@ object StreamProcessing extends PlayJsonSupport {
   val builder: StreamsBuilder = new StreamsBuilder
 
   //topics sources
-  val viewsTopicStream: KStream[String, Views] = builder.stream[String, Views](viewsTopicName)
-  val viewsGroupedByIdAndTitles: KGroupedStream[(Int, String), Views] = viewsTopicStream.groupBy((_, view) => (view._id, view.title))
-  val viewsOfAllTimes: KTable[(Int, String), Long] = viewsGroupedByIdAndTitles.count()(Materialized.as(allTimeViewsCountStoreName))
+  val viewsTopicStream: KStream[Long, Views] = builder.stream[Long, Views](viewsTopicName)
+  val viewsGroupedByIdAndTitles: KGroupedStream[(Long, String), Views] = viewsTopicStream.groupBy((_, view) => (view._id, view.title))
+  val viewsOfAllTimes: KTable[(Long, String), Long] = viewsGroupedByIdAndTitles.count()(Materialized.as(allTimeViewsCountStoreName))
 
 
   def run(): KafkaStreams = {
