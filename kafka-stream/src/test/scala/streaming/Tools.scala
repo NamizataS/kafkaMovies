@@ -59,10 +59,6 @@ object Tools {
   }
 
   object Converters {
-    /***
-     *
-     * @param view
-     */
     implicit class ViewToTestRecord(view: Views){
       def toTestRecord: TestRecord[Long, Views] = new TestRecord[Long, Views](view._id, view)
     }

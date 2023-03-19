@@ -22,24 +22,38 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     val numberOfEvents: Int = Random.nextInt(10) + 1
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
     val views: List[Views] = events.map(_.view)
-    val likes: List[Likes] = events.map(_.like)
 
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
       Serdes.longSerde.serializer, toSerde[Views].serializer)
-    //val likesPipeline = testDriver.createInputTopic(StreamProcessing.likesTopicName,
-    //  Serdes.longSerde.serializer, toSerde[Likes].serializer)
     viewsPipeline.pipeRecordList(views.map(_.toTestRecord).asJava)
-    //likesPipeline.pipeRecordList(likes.map(_.toTestRecord).asJava)
 
-    Then("Assert the count of all times views per movies")
+    Then("assert the count of all times views per movies")
     val expectedViewsPerMovies: Map[(Long, String), Long] = views.groupBy(view => (view._id, view.title)).map{ case (key, values) => (key, values.size)}
     val computedAllTimesViewsPerMovies = testDriver.getKeyValueStore[(Long, String), Long](StreamProcessing.allTimeViewsCountStoreName)
     expectedViewsPerMovies.foreach { case (movie, countViews) =>
-      println(s"ID is ${movie._1} Movie is ${movie._2} and countViews is $countViews")
       assert(computedAllTimesViewsPerMovies.get(movie) == countViews)}
     testDriver.close()
+  }
+
+  test("Validate all times count per category"){
+    Given("a list of views and scores")
+    val numberOfEvents: Int = Random.nextInt(10) + 1
+    val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
+    val views: List[Views] = events.map(_.view)
+
+    When("events are submitted to the cluster")
+    val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
+    val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
+      Serdes.longSerde.serializer, toSerde[Views].serializer)
+    viewsPipeline.pipeRecordList(views.map(_.toTestRecord).asJava)
+
+    Then("assert the count of all times views per movies per categories")
+    val expectedViewsPerMoviesAndCategories: Map[Views, Long] = views.groupBy(view => view).map{ case (key, value) => (key, value.size)}
+    val computedAllTimesViewsPerMoviesAndCategories = testDriver.getKeyValueStore[Views, Long](StreamProcessing.allTimesViewsPerCategoryCountStoreName)
+    expectedViewsPerMoviesAndCategories.foreach{ case (view, countView) =>
+    assert(computedAllTimesViewsPerMoviesAndCategories.get(view) == countView)}
   }
 
 }

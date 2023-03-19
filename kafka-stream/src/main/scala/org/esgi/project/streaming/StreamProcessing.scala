@@ -4,12 +4,14 @@ import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.Serde
+import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig, Topology}
 import org.esgi.project.ConfigLoader
 import org.esgi.project.streaming.models.{Likes, Views}
 
+import java.time.Duration
 import java.util.{Properties, UUID}
 
 object StreamProcessing extends PlayJsonSupport {
@@ -20,11 +22,13 @@ object StreamProcessing extends PlayJsonSupport {
   val applicationName = s"kazaamovies-events-stream-app-${UUID.randomUUID}"
   private val kafkaProperties = ConfigLoader.loadPropertiesFile("kafka.properties")
   // Topics names
-  val viewsTopicName = kafkaProperties.getProperty("views.topic")
-  val likesTopicName = kafkaProperties.getProperty("likes.topic")
+  val viewsTopicName: String = kafkaProperties.getProperty("views.topic")
+  val likesTopicName: String = kafkaProperties.getProperty("likes.topic")
 
   // Store names
-  val allTimeViewsCountStoreName = kafkaProperties.getProperty("store.name.all.time.view.count")
+  val allTimeViewsCountStoreName: String = kafkaProperties.getProperty("store.name.all.time.view.count")
+  val allTimesViewsPerCategoryCountStoreName: String = kafkaProperties.getProperty("store.name.all.time.view.count.per.category")
+  val recentViewsPerCategoryCountStoreName: String = kafkaProperties.getProperty("store.name.last.five.minutes.view.count.per.category")
   private val props: Properties = buildProperties
 
   //implicit Serde
@@ -36,9 +40,15 @@ object StreamProcessing extends PlayJsonSupport {
 
   //topics sources
   val viewsTopicStream: KStream[Long, Views] = builder.stream[Long, Views](viewsTopicName)
+
+  //statistics computation
   val viewsGroupedByIdAndTitles: KGroupedStream[(Long, String), Views] = viewsTopicStream.groupBy((_, view) => (view._id, view.title))
   val viewsOfAllTimes: KTable[(Long, String), Long] = viewsGroupedByIdAndTitles.count()(Materialized.as(allTimeViewsCountStoreName))
-
+  val viewsGroupedByIdTitlesAndCategory: KGroupedStream[Views, Views] = viewsTopicStream.groupBy((_, view) => view)
+  val viewsOfAllTimesPerCategories: KTable[Views, Long] = viewsGroupedByIdTitlesAndCategory.count()(Materialized.as(allTimesViewsPerCategoryCountStoreName))
+  val viewsPerMoviesPerCategoriesLastFiveMinutes: KTable[Windowed[Views], Long] = viewsGroupedByIdTitlesAndCategory
+                                                  .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5L)).advanceBy(Duration.ofMinutes(5L)))
+                                                  .count()(Materialized.as(recentViewsPerCategoryCountStoreName))
 
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
