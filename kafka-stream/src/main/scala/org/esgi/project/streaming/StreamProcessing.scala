@@ -47,7 +47,7 @@ object StreamProcessing extends PlayJsonSupport {
   val viewsGroupedByIdTitlesAndCategory: KGroupedStream[Views, Views] = viewsTopicStream.groupBy((_, view) => view)
   val viewsOfAllTimesPerCategories: KTable[Views, Long] = viewsGroupedByIdTitlesAndCategory.count()(Materialized.as(allTimesViewsPerCategoryCountStoreName))
   val viewsPerMoviesPerCategoriesLastFiveMinutes: KTable[Windowed[Views], Long] = viewsGroupedByIdTitlesAndCategory
-                                                  .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5L)).advanceBy(Duration.ofMinutes(5L)))
+                                                  .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)))
                                                   .count()(Materialized.as(recentViewsPerCategoryCountStoreName))
 
   def run(): KafkaStreams = {

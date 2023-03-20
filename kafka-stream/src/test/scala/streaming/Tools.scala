@@ -4,18 +4,20 @@ import org.esgi.project.streaming.models.{Likes, Views}
 import streaming.Tools.Models.GeneratedView
 import org.apache.kafka.streams.test.TestRecord
 
+import java.time.temporal.ChronoUnit
+import java.time.{Duration, Instant, OffsetDateTime, OffsetTime, ZoneOffset}
 import scala.annotation.tailrec
 import scala.util.Random
 
 object Tools {
 
   object Models {
-    case class GeneratedView(view: Views, like: Likes)
+    case class GeneratedView(view: Views, like: Likes, recordTimestamp: Instant)
   }
 
   object Utils {
     val viewsCategory: List[String] = List("start_only", "half", "full")
-    val moviesTitles: List[String] = List("Becca est un clown", "Interstellar", "Alexandre est un couilloncadeau")
+    val moviesTitles: List[String] = List("Becca est un clown", "Interstellar", "Inception", "Shadow and bone")
 
     /** *
      * To generate a single view and like
@@ -27,8 +29,9 @@ object Tools {
       val movieTitle: String = moviesTitles(id.toInt)
       val score: Double = Math.min(Random.nextDouble * 101, 100)
       val viewCategory = viewsCategory(Random.nextInt(viewsCategory.length))
+      val recordTimestamp: Instant = OffsetDateTime.now(ZoneOffset.UTC).minus(Duration.ofMinutes((Random.nextInt(7) + 1))).toInstant
       GeneratedView(view = new Views(_id = id, title = movieTitle, viewsCategory = viewCategory),
-        like = new Likes(_id = id, score = score))
+        like = new Likes(_id = id, score = score), recordTimestamp = recordTimestamp)
     }
 
     /** *
@@ -60,7 +63,7 @@ object Tools {
 
   object Converters {
     implicit class ViewToTestRecord(view: Views){
-      def toTestRecord: TestRecord[Long, Views] = new TestRecord[Long, Views](view._id, view)
+      def toTestRecord(recordTimestamp: Instant): TestRecord[Long, Views] = new TestRecord[Long, Views](view._id, view, recordTimestamp)
     }
 
     implicit class LikesToTestRecord(like: Likes){
