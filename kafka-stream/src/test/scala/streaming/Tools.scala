@@ -1,8 +1,12 @@
 package streaming
 
+import org.apache.kafka.streams.kstream.Transformer
+import org.apache.kafka.streams.processor.ProcessorContext
+import org.apache.kafka.streams.state.KeyValueStore
 import org.esgi.project.streaming.models.{Likes, Views}
 import streaming.Tools.Models.GeneratedView
 import org.apache.kafka.streams.test.TestRecord
+import org.esgi.project.streaming.StreamProcessing
 
 import java.time.temporal.ChronoUnit
 import java.time.{Duration, Instant, OffsetDateTime, OffsetTime, ZoneOffset}
@@ -10,6 +14,7 @@ import scala.annotation.tailrec
 import scala.util.Random
 
 object Tools {
+
 
   object Models {
     case class GeneratedView(view: Views, like: Likes, recordTimestamp: Instant)
@@ -29,7 +34,7 @@ object Tools {
       val movieTitle: String = moviesTitles(id.toInt)
       val score: Double = Math.min(Random.nextDouble * 101, 100)
       val viewCategory = viewsCategory(Random.nextInt(viewsCategory.length))
-      val recordTimestamp: Instant = OffsetDateTime.now(ZoneOffset.UTC).minus(Duration.ofMinutes((Random.nextInt(7) + 1))).toInstant
+      val recordTimestamp: Instant = OffsetDateTime.now(ZoneOffset.UTC).minus(Duration.ofMinutes(Random.nextInt(7) + 1)).toInstant
       GeneratedView(view = new Views(_id = id, title = movieTitle, viewsCategory = viewCategory),
         like = new Likes(_id = id, score = score), recordTimestamp = recordTimestamp)
     }
@@ -59,6 +64,27 @@ object Tools {
 
       insideGenerateEvents(countEvents, 0, List())
     }
+
+    def computeStartAndEndDate(currentTime: OffsetDateTime): (Instant, Instant) = {
+      val currentTimeEndsWith = currentTime.getMinute % 10
+      currentTimeEndsWith match {
+        case _ if currentTimeEndsWith == 0 || currentTimeEndsWith == 5 =>
+          val startDate = currentTime
+          val endDate = currentTime.plus(Duration.ofMinutes(5))
+          (startDate.toInstant, endDate.toInstant)
+        case endsWith => endsWith match {
+          case _ if endsWith < 5 =>
+            val startDate = currentTime.minus(Duration.ofMinutes(endsWith))
+            val endDate = startDate.plus(Duration.ofMinutes(5))
+            (startDate.toInstant, endDate.toInstant)
+          case _ =>
+            val differential = endsWith - 5
+            val startDate = currentTime.minus(Duration.ofMinutes(differential))
+            val endDate = startDate.plus(Duration.ofMinutes(5))
+            (startDate.toInstant, endDate.toInstant)
+        }
+      }
+    }
   }
 
   object Converters {
@@ -67,7 +93,7 @@ object Tools {
     }
 
     implicit class LikesToTestRecord(like: Likes){
-      def toTestRecord: TestRecord[Long, Likes] = new TestRecord[Long, Likes](like._id, like)
+      def toTestRecord(recordTimestamp: Instant): TestRecord[Long, Likes] = new TestRecord[Long, Likes](like._id, like, recordTimestamp)
     }
   }
 }

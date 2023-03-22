@@ -8,13 +8,13 @@ import play.api.libs.json.{Json, OFormat}
  * @param count
  * @param meanScore
  */
-case class MeanScoreForMovie(sum: Long, count: Long, meanScore: Long){
+case class MeanScoreForMovie(sum: Double, count: Double, meanScore: Double){
   /***
    *
    * @param score
    * @return
    */
-  def increment(score: Long): MeanScoreForMovie = this.copy(sum = this.sum + score, count = this.count + 1)
+  def increment(score: Double): MeanScoreForMovie = this.copy(sum = this.sum + score, count = this.count + 1).computeMeanScore
 
   /***
    *
