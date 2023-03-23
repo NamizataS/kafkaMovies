@@ -6,7 +6,7 @@ import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.state.{ValueAndTimestamp, WindowStore}
 import org.esgi.project.streaming.StreamProcessing
-import org.esgi.project.streaming.models.{Likes, Views}
+import org.esgi.project.streaming.models.{Likes, MeanScoreForMovie, Views, ViewsWithScore}
 import org.scalatest.GivenWhenThen
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -97,11 +97,11 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
 
   test("Validate mean score"){
     Given("a list of views and scores")
-    val numberOfEvents: Int = Random.nextInt(16) + 10
+    val numberOfEvents: Int = Random.nextInt(10) + 1
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
     val views: List[(Views, Instant)] = events.map(event => (event.view, event.recordTimestamp))
     val likes: List[(Likes, Instant)] = events.map(event => (event.like, event.recordTimestamp))
-
+    println(s"events generated are $events")
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
@@ -112,7 +112,19 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     likesPipeline.pipeRecordList(likes.map(like => like._1.toTestRecord(like._2)).asJava)
 
     Then("assert the mean score for each movie generated")
-
+    val expectedMeanScorePerMovies: Map[(Long, String), Double] = events.map(event => new ViewsWithScore(event.view._id, event.view.title, event.view.viewsCategory, event.like.score))
+      .groupBy(viewWithScore => (viewWithScore._id, viewWithScore.title)).map{ case (key, viewWithScore) =>
+    val meanScore = viewWithScore.map(_.score).sum / viewWithScore.size
+      (key, meanScore)}
+    val computedMeanScorePerMovies = testDriver.getKeyValueStore[(Long, String), MeanScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
+    println("test driver value")
+    testDriver.getKeyValueStore[(Long, String), MeanScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName).all().asScala.toList
+      .foreach(record => println(s"movie is ${record.key._2} and meanScore is ${record.value.meanScore}"))
+    println("Expected values")
+    expectedMeanScorePerMovies.foreach(record => println(s"movie is ${record._1._2} and meanScore is ${record._2}"))
+    expectedMeanScorePerMovies.foreach{ case (movie, meanScore) =>
+      assert(computedMeanScorePerMovies.get(movie).meanScore == meanScore)}
+    testDriver.close()
   }
 
 }

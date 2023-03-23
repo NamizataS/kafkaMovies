@@ -44,10 +44,11 @@ object StreamProcessing extends PlayJsonSupport {
   //topics sources
   val viewsTopicStream: KStream[Long, Views] = builder.stream[Long, Views](viewsTopicName)
   val likesTopicStream: KStream[Long, Likes] = builder.stream[Long, Likes](likesTopicName)
+  //rajouter un builder.table pour faire un join sur une table et pas un stream
   val viewsAndLikes: KStream[Long, ViewsWithScore] = likesTopicStream.join(viewsTopicStream)(
     joiner = {(like, view) => ViewsWithScore(_id = like._id, title = view.title, viewCategory = view.viewsCategory, score = like.score)
     },
-    windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
+    windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofMinutes(10))
   )
 
   //statistics computation
