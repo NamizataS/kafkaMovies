@@ -1,20 +1,15 @@
 package streaming
 import io.github.azhur.kafka.serde.PlayJsonSupport
-import org.apache.kafka.streams.kstream.Windowed
-import org.apache.kafka.streams.{KeyValue, TopologyTestDriver}
+import org.apache.kafka.streams.TopologyTestDriver
 import org.apache.kafka.streams.scala.serialization.Serdes
-import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.state.{ValueAndTimestamp, WindowStore}
 import org.esgi.project.streaming.StreamProcessing
-import org.esgi.project.streaming.models.{Likes, MeanScoreForMovie, Views, ViewsWithScore}
+import org.esgi.project.streaming.models.{Likes, AverageScoreForMovie, Views, ViewsWithScore}
 import org.scalatest.GivenWhenThen
 import org.scalatest.funsuite.AnyFunSuite
 
-import java.lang
-import java.time.temporal.ChronoUnit
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import scala.jdk.CollectionConverters._
-import scala.annotation.tailrec
 import scala.util.Random
 
 class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonSupport {
@@ -95,13 +90,14 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     testDriver.close()
   }
 
-  test("Validate mean score"){
+  test("Validate average score all time") {
     Given("a list of views and scores")
-    val numberOfEvents: Int = Random.nextInt(10) + 1
+    val numberOfEvents: Int = Random.nextInt(16) + 10
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
     val views: List[(Views, Instant)] = events.map(event => (event.view, event.recordTimestamp))
     val likes: List[(Likes, Instant)] = events.map(event => (event.like, event.recordTimestamp))
-    println(s"events generated are $events")
+    val epsilon: Double = 1e-12
+
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
@@ -111,19 +107,16 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
     likesPipeline.pipeRecordList(likes.map(like => like._1.toTestRecord(like._2)).asJava)
 
-    Then("assert the mean score for each movie generated")
-    val expectedMeanScorePerMovies: Map[(Long, String), Double] = events.map(event => new ViewsWithScore(event.view._id, event.view.title, event.view.viewsCategory, event.like.score))
-      .groupBy(viewWithScore => (viewWithScore._id, viewWithScore.title)).map{ case (key, viewWithScore) =>
-    val meanScore = viewWithScore.map(_.score).sum / viewWithScore.size
-      (key, meanScore)}
-    val computedMeanScorePerMovies = testDriver.getKeyValueStore[(Long, String), MeanScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
-    println("test driver value")
-    testDriver.getKeyValueStore[(Long, String), MeanScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName).all().asScala.toList
-      .foreach(record => println(s"movie is ${record.key._2} and meanScore is ${record.value.meanScore}"))
-    println("Expected values")
-    expectedMeanScorePerMovies.foreach(record => println(s"movie is ${record._1._2} and meanScore is ${record._2}"))
-    expectedMeanScorePerMovies.foreach{ case (movie, meanScore) =>
-      assert(computedMeanScorePerMovies.get(movie).meanScore == meanScore)}
+    Then("assert the average score for each movie generated")
+    val expectedAverageScorePerMovies: Map[(Long, String), Double] = events.map(event => new ViewsWithScore(event.view._id, event.view.title, event.view.viewsCategory, event.like.score))
+      .groupBy(viewWithScore => (viewWithScore._id, viewWithScore.title)).map { case (key, viewWithScore) =>
+      val averageScore = viewWithScore.map(_.score).sum / viewWithScore.size
+      (key, averageScore)
+    }
+    val computedAverageScorePerMovies = testDriver.getKeyValueStore[(Long, String), AverageScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
+    expectedAverageScorePerMovies.foreach { case (movie, averageScore) =>
+      assert(math.abs(computedAverageScorePerMovies.get(movie).averageScore - averageScore) < epsilon )
+    }
     testDriver.close()
   }
 

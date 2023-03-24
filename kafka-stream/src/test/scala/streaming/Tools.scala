@@ -34,7 +34,7 @@ object Tools {
       val movieTitle: String = moviesTitles(id.toInt)
       val score: Double = Math.min(Random.nextDouble * 101, 100)
       val viewCategory = viewsCategory(Random.nextInt(viewsCategory.length))
-      val recordTimestamp: Instant = OffsetDateTime.now(ZoneOffset.UTC).minus(Duration.ofMinutes(Random.nextInt(7) + 1)).toInstant
+      val recordTimestamp: Instant = OffsetDateTime.now(ZoneOffset.UTC).minus(Duration.ofMinutes(Random.nextInt(15) + 1)).toInstant
       GeneratedView(view = new Views(_id = id, title = movieTitle, viewsCategory = viewCategory),
         like = new Likes(_id = id, score = score), recordTimestamp = recordTimestamp)
     }
