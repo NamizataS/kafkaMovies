@@ -50,8 +50,8 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
 
     Then("assert the count of all times views per movies per categories")
-    val expectedViewsPerMoviesAndCategories: Map[Views, Long] = views.groupBy(view => view._1).map{ case (key, value) => (key, value.size)}
-    val computedAllTimesViewsPerMoviesAndCategories = testDriver.getKeyValueStore[Views, Long](StreamProcessing.allTimesViewsPerCategoryCountStoreName)
+    val expectedViewsPerMoviesAndCategories: Map[(Long, String), Long] = views.groupBy(view => view._1).map{ case (key, value) => ((key._id, key.viewsCategory), value.size)}
+    val computedAllTimesViewsPerMoviesAndCategories = testDriver.getKeyValueStore[(Long, String), Long](StreamProcessing.allTimesViewsPerCategoryCountStoreName)
     expectedViewsPerMoviesAndCategories.foreach{ case (view, countView) =>
     assert(computedAllTimesViewsPerMoviesAndCategories.get(view) == countView)}
     testDriver.close()
@@ -70,21 +70,20 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
       Serdes.longSerde.serializer, toSerde[Views].serializer)
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
-    //Thread.sleep(Duration.ofMinutes(1).toMillis)
 
     Then("assert the count of the last 5 minutes views per movies per categories")
-    val expectedViewsPerMoviesAndCategoriesLastFiveMinutes: Map[Views, Long] = views.filter{ case (_, timestamp) =>
+    val expectedViewsPerMoviesAndCategoriesLastFiveMinutes: Map[(Long, String), Long] = views.filter{ case (_, timestamp) =>
                             val eventTime = timestamp.atOffset(ZoneOffset.UTC)
                             !eventTime.isBefore(fiveMinutesAgo) && !eventTime.isAfter(currentTime)}
             .groupBy(view => view._1)
-            .map{ case (key, value) => (key, value.size)}
+            .map{ case (key, value) => ((key._id, key.viewsCategory), value.size)}
 
-    val computedViewsPerMoviesAndCategoriesLastFiveMinutes: WindowStore[Views, ValueAndTimestamp[Long]] = testDriver.getTimestampedWindowStore[Views, Long](StreamProcessing.recentViewsPerCategoryCountStoreName)
+    val computedViewsPerMoviesAndCategoriesLastFiveMinutes: WindowStore[(Long, String), ValueAndTimestamp[Long]] = testDriver.getTimestampedWindowStore[(Long, String), Long](StreamProcessing.recentViewsPerCategoryCountStoreName)
     expectedViewsPerMoviesAndCategoriesLastFiveMinutes.foreach{ case (view, countView) =>
      val row = computedViewsPerMoviesAndCategoriesLastFiveMinutes.fetch(view, fiveMinutesAgo.toInstant, currentTime.toInstant).asScala.toList
       row.headOption match {
-        case Some(row) => assert(row.value.value() == countView, s"Values did not match for movie ${view.title} where $countView was expected and ${row.value.value()} was found for cat ${view.viewsCategory}")
-        case None => assert(false, s"No data for movie ${view.title} and category ${view.viewsCategory} and count $countView")
+        case Some(row) => assert(row.value.value() == countView, s"Values did not match for movie id ${view._1} and category ${view._2} where $countView was expected and ${row.value.value()} ")
+        case None => assert(false, s"No data for movie id num ${view._1} and category ${view._2}")
       }
     }
     testDriver.close()
