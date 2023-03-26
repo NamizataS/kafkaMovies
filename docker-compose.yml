@@ -29,6 +29,7 @@ services:
       - movies-network
 
   injector:
+    platform: linux/x86_64
     image: nekonyuu/movies-view-injector:latest
     container_name: movies-view-injector
     depends_on:

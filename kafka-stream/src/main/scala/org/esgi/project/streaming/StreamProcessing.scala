@@ -23,6 +23,10 @@ object StreamProcessing extends PlayJsonSupport {
 
   val applicationName = s"kazaamovies-events-stream-app-${UUID.randomUUID}"
   private val kafkaProperties = ConfigLoader.loadPropertiesFile("kafka.properties")
+  private val props: Properties = buildProperties
+  // defining processing graph
+  val builder: StreamsBuilder = new StreamsBuilder
+
   // Topics names
   val viewsTopicName: String = kafkaProperties.getProperty("views.topic")
   val likesTopicName: String = kafkaProperties.getProperty("likes.topic")
@@ -32,14 +36,13 @@ object StreamProcessing extends PlayJsonSupport {
   val allTimesViewsPerCategoryCountStoreName: String = kafkaProperties.getProperty("store.name.all.time.view.count.per.category")
   val recentViewsPerCategoryCountStoreName: String = kafkaProperties.getProperty("store.name.last.five.minutes.view.count.per.category")
   val allTimesTenBestAverageScoreStoreName: String = kafkaProperties.getProperty("store.name.all.time.ten.best.average.scores")
-  private val props: Properties = buildProperties
+
 
   //implicit Serde
   implicit val viewsSerde: Serde[Views] = toSerde[Views]
   implicit val likesSerde: Serde[Likes] = toSerde[Likes]
 
-  // defining processing graph
-  val builder: StreamsBuilder = new StreamsBuilder
+
 
   //topics sources
   val viewsTopicStream: KStream[Long, Views] = builder.stream[Long, Views](viewsTopicName)
@@ -68,6 +71,11 @@ object StreamProcessing extends PlayJsonSupport {
 
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
+    val stateListener: KafkaStreams.StateListener = (newState: KafkaStreams.State, oldState: KafkaStreams.State) => {
+      println(s"KafkaStreams état changé de $oldState à $newState")
+    }
+    // Ajoutez l'écouteur d'état à l'instance KafkaStreams
+    streams.setStateListener(stateListener)
     streams.start()
 
     // Add shutdown hook to respond to SIGTERM and gracefully close Kafka Streams
