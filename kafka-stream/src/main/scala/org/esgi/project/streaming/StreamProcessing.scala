@@ -17,7 +17,7 @@ import java.util.{Properties, UUID}
 object StreamProcessing extends PlayJsonSupport {
 
   import org.apache.kafka.streams.scala.ImplicitConversions._
-  import org.apache.kafka.common.serialization.Serdes
+  import org.apache.kafka.streams.scala.serialization.Serdes._
 
 
   val applicationName = s"kazaamovies-events-stream-app-${UUID.randomUUID}"
@@ -39,13 +39,8 @@ object StreamProcessing extends PlayJsonSupport {
 
 
   //implicit Serde
-  //implicit val viewsSerde: Serde[View] = toSerde[View]
-  //implicit val likesSerde: Serde[Like] = toSerde[Like]
-  implicit val keySerde: Serde[String] = Serdes.String().asInstanceOf[Serde[String]]
-  implicit val valueSerdeView: Serde[View] = Serdes.serdeFrom(new ViewSerializer, new ViewDeserializer)
-  implicit val valueSerdeLike: Serde[Like] = Serdes.serdeFrom(new LikeSerializer, new LikeDeserializer)
-  implicit val valueSerdeLong: Serde[Long] = Serdes.Long().asInstanceOf[Serde[Long]]
-
+  implicit val viewSerde: Serde[View] = toSerde[View]
+  implicit val likeSerde: Serde[Like] = toSerde[Like]
 
 
   //topics sources
@@ -53,7 +48,6 @@ object StreamProcessing extends PlayJsonSupport {
   val likesTopicStream: KStream[String, Like] = builder.stream[String, Like](likesTopicName)
 
   // join
-  // changer pour mettre un join avec joinwindow
   val viewsAndLikesStream: KStream[String, ViewsWithScore] = likesTopicStream.join(viewsTopicStream)(
     joiner = { (like, view) => ViewsWithScore(_id = view.id, title = view.title, score = like.score) },
     windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofMinutes(60L))
@@ -70,7 +64,6 @@ object StreamProcessing extends PlayJsonSupport {
   val viewsPerMoviesPerCategoriesLastFiveMinutes: KTable[Windowed[(Long, String)], Long] = viewsGroupedByIdAndCategory
     .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5L)).advanceBy(Duration.ofMinutes(1L)))
     .count()(Materialized.as(recentViewsPerCategoryCountStoreName))
-
   val averageScoreAllTimes: KTable[(Long, String), AverageScoreForMovie] = viewsAndLikesStream.groupBy((_, viewWithScore) => (viewWithScore._id, viewWithScore.title)).aggregate[AverageScoreForMovie](initializer = AverageScoreForMovie.empty
   )(aggregator = { (_, like, agg) => agg.increment(like.score) })(Materialized.as(allTimesTenBestAverageScoreStoreName))
 

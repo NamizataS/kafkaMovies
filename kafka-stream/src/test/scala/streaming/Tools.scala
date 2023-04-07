@@ -59,27 +59,6 @@ object Tools {
 
       insideGenerateEvents(countEvents, 0, List())
     }
-
-    def computeStartAndEndDate(currentTime: OffsetDateTime): (Instant, Instant) = {
-      val currentTimeEndsWith = currentTime.getMinute % 10
-      currentTimeEndsWith match {
-        case _ if currentTimeEndsWith == 0 || currentTimeEndsWith == 5 =>
-          val startDate = currentTime
-          val endDate = currentTime.plus(Duration.ofMinutes(5))
-          (startDate.toInstant, endDate.toInstant)
-        case endsWith => endsWith match {
-          case _ if endsWith < 5 =>
-            val startDate = currentTime.minus(Duration.ofMinutes(endsWith))
-            val endDate = startDate.plus(Duration.ofMinutes(5))
-            (startDate.toInstant, endDate.toInstant)
-          case _ =>
-            val differential = endsWith - 5
-            val startDate = currentTime.minus(Duration.ofMinutes(differential))
-            val endDate = startDate.plus(Duration.ofMinutes(5))
-            (startDate.toInstant, endDate.toInstant)
-        }
-      }
-    }
   }
 
   object Converters {

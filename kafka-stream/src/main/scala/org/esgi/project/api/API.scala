@@ -7,20 +7,20 @@ import org.esgi.project.streaming.StreamProcessing
 import org.esgi.project.streaming.models.AverageScoreForMovie
 
 import scala.jdk.CollectionConverters._
-import java.time.{OffsetDateTime, ZoneOffset}
+import java.time.{Duration, OffsetDateTime, ZoneOffset}
 
 class API(streamApp: KafkaStreams){
   private val parametersMovieTitles = StoreQueryParameters.fromNameAndType(StreamProcessing.movieTitlesStoreName, QueryableStoreTypes.keyValueStore[Long, String]())
 
   /***
-   *
-   * @param from
-   * @param to
-   * @param id
-   * @return
+   * To get the number of views and the distribution
+   * @param id : id of the movie (Long)
+   * @return : Views number and distribution of views for the given id
    */
-  def viewsPerMovies(from: OffsetDateTime, to: OffsetDateTime, id: Long): List[ViewsPerMovies] = {
+  def viewsPerMovies(id: Long): List[ViewsPerMovies] = {
     val categories : List[String] = List("start_only", "half", "full")
+    val to = OffsetDateTime.now(ZoneOffset.UTC)
+    val from = to.minus(Duration.ofMinutes(5L))
 
     val parametersAllTimesViewCount = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimeViewsCountStoreName, QueryableStoreTypes.keyValueStore[Long, Long]())
     val parametersAllTimesViewCountPerCategory = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimesViewsPerCategoryCountStoreName, QueryableStoreTypes.keyValueStore[(Long, String), Long]())
@@ -71,8 +71,8 @@ class API(streamApp: KafkaStreams){
 
   /***
    *
-   * @param best
-   * @return
+   * @param best : boolean representing if we want the top 10 best or worse average scores
+   * @return : List of top 10 average scores
    */
   def tenBestOrWorseAverageScore(best: Boolean): List[MovieAverageScore] = {
     val parametersAllTimesAverageScore = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimesTenBestAverageScoreStoreName, QueryableStoreTypes.keyValueStore[(Long, String), AverageScoreForMovie]())
@@ -92,8 +92,8 @@ class API(streamApp: KafkaStreams){
 
   /***
    *
-   * @param best
-   * @return
+   * @param best : boolean representing if we want the top 10 best or worse number of views
+   * @return : List of top 10 number of views
    */
   def tenBestOrWorseViews(best: Boolean): List[ViewsMovieStats] = {
     val parametersAllTimesViews = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimeViewsCountStoreName, QueryableStoreTypes.keyValueStore[Long, Long]())

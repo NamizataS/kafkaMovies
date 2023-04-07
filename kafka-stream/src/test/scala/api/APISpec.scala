@@ -126,7 +126,7 @@ class APISpec extends AnyFunSuite with GivenWhenThen with BeforeAndAfterAll with
     }
 
     expectedViewsPerMovies.zipWithIndex.foreach { case (viewsMovie, index) =>
-      val apiResults: List[ViewsPerMovies] = api.viewsPerMovies(from = fromDate, to = toDate, id = index.toLong)
+      val apiResults: List[ViewsPerMovies] = api.viewsPerMovies(id = index.toLong)
       assert(apiResults.length == 1)
       assert(viewsMovie == apiResults)
     }
