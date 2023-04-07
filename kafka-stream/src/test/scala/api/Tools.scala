@@ -1,8 +1,9 @@
-package streaming
+package api
 
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.streams.test.TestRecord
 import org.esgi.project.streaming.models.{Like, View}
 import streaming.Tools.Models.GeneratedView
-import org.apache.kafka.streams.test.TestRecord
 
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import scala.annotation.tailrec
@@ -17,7 +18,7 @@ object Tools {
 
   object Utils {
     val viewsCategory: List[String] = List("start_only", "half", "full")
-    val moviesTitles: List[String] = List("Star Wars", "Interstellar", "Inception", "Shadow and bone")
+    val moviesTitles: List[String] = List("Star wars", "Interstellar", "Inception", "Shadow and bone")
 
     /** *
      * To generate a single view and like
@@ -85,10 +86,26 @@ object Tools {
   object Converters {
     implicit class ViewToTestRecord(view: View){
       def toTestRecord(recordTimestamp: Instant): TestRecord[String, View] = new TestRecord[String, View](view.id.toString, view, recordTimestamp)
+      def toRecord(topic: String, timestamp: Instant,partition:Int = 0): ProducerRecord[String, View] = new ProducerRecord[String, View](
+        topic,
+        partition,
+        timestamp.toEpochMilli,
+        view.id.toString,
+        view
+      )
     }
 
     implicit class LikesToTestRecord(like: Like){
       def toTestRecord(recordTimestamp: Instant): TestRecord[String, Like] = new TestRecord[String, Like](like.id.toString, like, recordTimestamp)
+      def toRecord(topic: String, timestamp: Instant, partition: Int = 0): ProducerRecord[String, Like] = {
+        new ProducerRecord[String, Like](
+        topic,
+        partition,
+        timestamp.toEpochMilli,
+        like.id.toString,
+        like
+      )
+      }
     }
   }
 }

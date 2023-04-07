@@ -4,7 +4,7 @@ import org.apache.kafka.streams.TopologyTestDriver
 import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.{ValueAndTimestamp, WindowStore}
 import org.esgi.project.streaming.StreamProcessing
-import org.esgi.project.streaming.models.{Likes, AverageScoreForMovie, Views, ViewsWithScore}
+import org.esgi.project.streaming.models.{Like, AverageScoreForMovie, View, ViewsWithScore}
 import org.scalatest.GivenWhenThen
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -20,17 +20,17 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     Given("a list of views and scores")
     val numberOfEvents: Int = Random.nextInt(10) + 1
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
-    val views: List[(Views, Instant)] = events.map(event => (event.view, event.recordTimestamp))
+    val views: List[(View, Instant)] = events.map(event => (event.view, event.recordTimestamp))
 
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
-      Serdes.longSerde.serializer, toSerde[Views].serializer)
+      Serdes.stringSerde.serializer, toSerde[View].serializer)
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
 
     Then("assert the count of all times views per movies")
-    val expectedViewsPerMovies: Map[(Long, String), Long] = views.groupBy(view => (view._1._id, view._1.title)).map{ case (key, values) => (key, values.size)}
-    val computedAllTimesViewsPerMovies = testDriver.getKeyValueStore[(Long, String), Long](StreamProcessing.allTimeViewsCountStoreName)
+    val expectedViewsPerMovies: Map[Long, Long] = views.groupBy(view => view._1.id).map{ case (key, values) => (key, values.size)}
+    val computedAllTimesViewsPerMovies = testDriver.getKeyValueStore[Long, Long](StreamProcessing.allTimeViewsCountStoreName)
     expectedViewsPerMovies.foreach { case (movie, countViews) =>
       assert(computedAllTimesViewsPerMovies.get(movie) == countViews)
     }
@@ -41,16 +41,16 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     Given("a list of views and scores")
     val numberOfEvents: Int = Random.nextInt(10) + 1
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
-    val views: List[(Views, Instant)] = events.map(event => (event.view, event.recordTimestamp))
+    val views: List[(View, Instant)] = events.map(event => (event.view, event.recordTimestamp))
 
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
-      Serdes.longSerde.serializer, toSerde[Views].serializer)
+      Serdes.stringSerde.serializer, toSerde[View].serializer)
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
 
     Then("assert the count of all times views per movies per categories")
-    val expectedViewsPerMoviesAndCategories: Map[(Long, String), Long] = views.groupBy(view => view._1).map{ case (key, value) => ((key._id, key.viewsCategory), value.size)}
+    val expectedViewsPerMoviesAndCategories: Map[(Long, String), Long] = views.groupBy(view => view._1).map{ case (key, value) => ((key.id, key.view_category), value.size)}
     val computedAllTimesViewsPerMoviesAndCategories = testDriver.getKeyValueStore[(Long, String), Long](StreamProcessing.allTimesViewsPerCategoryCountStoreName)
     expectedViewsPerMoviesAndCategories.foreach{ case (view, countView) =>
     assert(computedAllTimesViewsPerMoviesAndCategories.get(view) == countView)}
@@ -61,14 +61,14 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     Given("a list of views and scores")
     val numberOfEvents: Int = Random.nextInt(16) + 10
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
-    val views: List[(Views, Instant)] = events.map(event => (event.view, event.recordTimestamp))
+    val views: List[(View, Instant)] = events.map(event => (event.view, event.recordTimestamp))
     val currentTime: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)
     val fiveMinutesAgo = currentTime.minus(Duration.ofMinutes(5))
 
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
-      Serdes.longSerde.serializer, toSerde[Views].serializer)
+      Serdes.stringSerde.serializer, toSerde[View].serializer)
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
 
     Then("assert the count of the last 5 minutes views per movies per categories")
@@ -76,11 +76,12 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
                             val eventTime = timestamp.atOffset(ZoneOffset.UTC)
                             !eventTime.isBefore(fiveMinutesAgo) && !eventTime.isAfter(currentTime)}
             .groupBy(view => view._1)
-            .map{ case (key, value) => ((key._id, key.viewsCategory), value.size)}
+            .map{ case (key, value) => ((key.id, key.view_category), value.size)}
 
     val computedViewsPerMoviesAndCategoriesLastFiveMinutes: WindowStore[(Long, String), ValueAndTimestamp[Long]] = testDriver.getTimestampedWindowStore[(Long, String), Long](StreamProcessing.recentViewsPerCategoryCountStoreName)
     expectedViewsPerMoviesAndCategoriesLastFiveMinutes.foreach{ case (view, countView) =>
      val row = computedViewsPerMoviesAndCategoriesLastFiveMinutes.fetch(view, fiveMinutesAgo.toInstant, currentTime.toInstant).asScala.toList
+      computedViewsPerMoviesAndCategoriesLastFiveMinutes.fetch(view, fiveMinutesAgo.toInstant, currentTime.toInstant).asScala.toList.foreach(rw => println(s"id is ${view._1} and value is ${rw.value.value()}"))
       row.headOption match {
         case Some(row) => assert(row.value.value() == countView, s"Values did not match for movie id ${view._1} and category ${view._2} where $countView was expected and ${row.value.value()} ")
         case None => assert(false, s"No data for movie id num ${view._1} and category ${view._2}")
@@ -93,26 +94,26 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     Given("a list of views and scores")
     val numberOfEvents: Int = Random.nextInt(16) + 10
     val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
-    val views: List[(Views, Instant)] = events.map(event => (event.view, event.recordTimestamp))
-    val likes: List[(Likes, Instant)] = events.map(event => (event.like, event.recordTimestamp))
+    val views: List[(View, Instant)] = events.map(event => (event.view, event.recordTimestamp))
+    val likes: List[(Like, Instant)] = events.map(event => (event.like, event.recordTimestamp))
     val epsilon: Double = 1e-12
 
     When("events are submitted to the cluster")
     val testDriver: TopologyTestDriver = new TopologyTestDriver(StreamProcessing.topology, StreamProcessing.buildProperties)
     val viewsPipeline = testDriver.createInputTopic(StreamProcessing.viewsTopicName,
-      Serdes.longSerde.serializer, toSerde[Views].serializer)
+      Serdes.stringSerde.serializer, toSerde[View].serializer)
     val likesPipeline = testDriver.createInputTopic(StreamProcessing.likesTopicName,
-      Serdes.longSerde.serializer, toSerde[Likes].serializer)
+      Serdes.stringSerde.serializer, toSerde[Like].serializer)
     viewsPipeline.pipeRecordList(views.map(view => view._1.toTestRecord(view._2)).asJava)
     likesPipeline.pipeRecordList(likes.map(like => like._1.toTestRecord(like._2)).asJava)
 
     Then("assert the average score for each movie generated")
-    val expectedAverageScorePerMovies: Map[(Long, String), Double] = events.map(event => new ViewsWithScore(event.view._id, event.view.title, event.view.viewsCategory, event.like.score))
-      .groupBy(viewWithScore => (viewWithScore._id, viewWithScore.title)).map { case (key, viewWithScore) =>
+    val expectedAverageScorePerMovies: Map[Long, Double] = events.map(event => new ViewsWithScore(event.view.id, event.view.title, event.like.score))
+      .groupBy(viewWithScore => viewWithScore._id).map { case (key, viewWithScore) =>
       val averageScore = viewWithScore.map(_.score).sum / viewWithScore.size
       (key, averageScore)
     }
-    val computedAverageScorePerMovies = testDriver.getKeyValueStore[(Long, String), AverageScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
+    val computedAverageScorePerMovies = testDriver.getKeyValueStore[Long, AverageScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
     expectedAverageScorePerMovies.foreach { case (movie, averageScore) =>
       assert(math.abs(computedAverageScorePerMovies.get(movie).averageScore - averageScore) < epsilon )
     }
