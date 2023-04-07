@@ -15,9 +15,8 @@ import org.esgi.project.streaming.StreamProcessing
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
 import org.apache.kafka.streams.scala.serialization.Serdes
-import org.esgi.project.api.models.{MovieAverageScore, Stats, StatsDetails, ViewsPerMovies}
+import org.esgi.project.api.models.{MovieAverageScore, Stats, StatsDetails, ViewsMovieStats, ViewsPerMovies}
 import io.github.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
-
 
 import java.io.File
 import scala.jdk.CollectionConverters._
@@ -151,14 +150,58 @@ class APISpec extends AnyFunSuite with GivenWhenThen with BeforeAndAfterAll with
     viewsProducer.close()
     likesProducer.close()
 
-    Then("Check if best score is good")
-    val expectedAverageScorePerMovies: List[MovieAverageScore] = events.map(event => new ViewsWithScore(event.view.id, event.view.title, event.like.score))
+    Then("check if best score is good")
+    val expectedBestAverageScorePerMovies: List[MovieAverageScore] = events.map(event => new ViewsWithScore(event.view.id, event.view.title, event.like.score))
       .groupBy(viewWithScore => viewWithScore._id).map { case (key, viewWithScore) =>
       val averageScore = viewWithScore.map(_.score).sum / viewWithScore.size
       (key, averageScore)
     }.toList.sortBy { case (_, value) => -value }.take(10).map(movie => new MovieAverageScore(id = movie._1,
       title = Utils.moviesTitles(movie._1.toInt), score = movie._2))
-    val apiResults = api.tenBestOrWorseScore(best = true)
-    assert(expectedAverageScorePerMovies.map(expected => (expected.id, expected.title)) == apiResults.map(computed => (computed.id, computed.title)))
+    val apiResultsBestAverageScore = api.tenBestOrWorseAverageScore(best = true)
+    assert(expectedBestAverageScorePerMovies.map(expected => (expected.id, expected.title)) == apiResultsBestAverageScore.map(computed => (computed.id, computed.title)))
+
+    And("check if best views is good")
+    val expectedBestViews: List[ViewsMovieStats] = views.groupBy(view => view._1.id).map { case (key, value) => (key, value.size.toLong) }.toList
+      .sortBy{ case (_, value) => -value}.take(10).map(movie => new ViewsMovieStats(id = movie._1,
+      title = Utils.moviesTitles(movie._1.toInt), views = movie._2))
+    val apiResultsBestViews = api.tenBestOrWorseViews(best = true)
+    assert(apiResultsBestViews == expectedBestViews)
+  }
+
+  test("Validate top 10 worst views and score") {
+    Given("a list of views and score")
+    val numberOfEvents: Int = Random.nextInt(16) + 10
+    val events: List[GeneratedView] = Utils.generateEvents(numberOfEvents)
+    val views: List[(View, Instant)] = events.map(event => (event.view, event.recordTimestamp))
+    val likes: List[(Like, Instant)] = events.map(event => (event.like, event.recordTimestamp))
+    val viewsProducer = new KafkaProducer[String, View](producerProps, Serdes.stringSerde.serializer(), toSerde[View].serializer())
+    val likesProducer = new KafkaProducer[String, Like](producerProps, Serdes.stringSerde.serializer(), toSerde[Like].serializer())
+
+    When("events are submitted to the cluster")
+    views.foreach(event => viewsProducer.send(event._1.toRecord(StreamProcessing.viewsTopicName, event._2)))
+    likes.foreach(event => likesProducer.send(event._1.toRecord(StreamProcessing.likesTopicName, event._2)))
+    viewsProducer.flush()
+    likesProducer.flush()
+
+    viewsProducer.close()
+    likesProducer.close()
+
+    Then("check is worst score is good")
+    val expectedWorstAverageScorePerMovies: List[MovieAverageScore] = events.map(event => new ViewsWithScore(event.view.id, event.view.title, event.like.score))
+      .groupBy(viewWithScore => viewWithScore._id).map { case (key, viewWithScore) =>
+      val averageScore = viewWithScore.map(_.score).sum / viewWithScore.size
+      (key, averageScore)
+    }.toList.sortBy { case (_, value) => value }.take(10).map(movie => new MovieAverageScore(id = movie._1,
+      title = Utils.moviesTitles(movie._1.toInt), score = movie._2))
+    val apiResultsWorstAverageScore = api.tenBestOrWorseAverageScore(best = false)
+    assert(expectedWorstAverageScorePerMovies.map(expected => (expected.id, expected.title)) == apiResultsWorstAverageScore.map(computed => (computed.id, computed.title)))
+
+    And("check if worst views is good")
+    val expectedWorstViews: List[ViewsMovieStats] = views.groupBy(view => view._1.id).map { case (key, value) => (key, value.size.toLong) }.toList
+      .sortBy { case (_, value) => value }.take(10).map(movie => new ViewsMovieStats(id = movie._1,
+      title = Utils.moviesTitles(movie._1.toInt), views = movie._2))
+    val apiResultsWorstViews = api.tenBestOrWorseViews(best = false)
+    assert(apiResultsWorstViews == expectedWorstViews)
+
   }
 }

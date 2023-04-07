@@ -39,7 +39,7 @@ object WebServer extends PlayJsonSupport {
       path("stats" / "ten" / "best" / "score"){
         get {
           complete(
-            api.tenBestOrWorseScore(true)
+            api.tenBestOrWorseAverageScore(true)
           )
         }
       },
@@ -53,7 +53,7 @@ object WebServer extends PlayJsonSupport {
       path("stats" / "ten" / "worst" / "score"){
         get{
           complete(
-            api.tenBestOrWorseScore(false)
+            api.tenBestOrWorseAverageScore(false)
           )
         }
       },

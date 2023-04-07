@@ -11,6 +11,14 @@ import java.time.{OffsetDateTime, ZoneOffset}
 
 class API(streamApp: KafkaStreams){
   private val parametersMovieTitles = StoreQueryParameters.fromNameAndType(StreamProcessing.movieTitlesStoreName, QueryableStoreTypes.keyValueStore[Long, String]())
+
+  /***
+   *
+   * @param from
+   * @param to
+   * @param id
+   * @return
+   */
   def viewsPerMovies(from: OffsetDateTime, to: OffsetDateTime, id: Long): List[ViewsPerMovies] = {
     val categories : List[String] = List("start_only", "half", "full")
 
@@ -28,7 +36,7 @@ class API(streamApp: KafkaStreams){
       val count: Long = Option(allTimesCountPerCategory.get((id, cat))).getOrElse(0L)
       (cat, count)
     }.toMap
-// ajouter condition pour vérifier heure de début
+
     val availableInWindow = recentViewsCountPerCategory.fetchAll(from.toInstant, to.toInstant).asScala.toList
     val countRecentViewsPerCategory: Map[String, Long] = categories.map{cat =>
       val availableInWindowForIdAndCat = availableInWindow.filter(movie => movie.key.key() == (id, cat) && movie.key.window().startTime().atOffset(ZoneOffset.UTC).isAfter(from)
@@ -61,11 +69,15 @@ class API(streamApp: KafkaStreams){
     List(viewsPerMovie)
   }
 
-  def tenBestOrWorseScore(best: Boolean): List[MovieAverageScore] = {
-    val parametersAllTimesAverageScore = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimesTenBestAverageScoreStoreName, QueryableStoreTypes.keyValueStore[Long, AverageScoreForMovie]())
+  /***
+   *
+   * @param best
+   * @return
+   */
+  def tenBestOrWorseAverageScore(best: Boolean): List[MovieAverageScore] = {
+    val parametersAllTimesAverageScore = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimesTenBestAverageScoreStoreName, QueryableStoreTypes.keyValueStore[(Long, String), AverageScoreForMovie]())
 
-    val averageScoresAllTimes: ReadOnlyKeyValueStore[Long, AverageScoreForMovie] = streamApp.store(parametersAllTimesAverageScore)
-    val moviesTitles: ReadOnlyKeyValueStore[Long, String] = streamApp.store(parametersMovieTitles)
+    val averageScoresAllTimes: ReadOnlyKeyValueStore[(Long, String), AverageScoreForMovie] = streamApp.store(parametersAllTimesAverageScore)
     val sortedList = if (best) {
       averageScoresAllTimes.all().asScala.toList.sortBy(movie => movie.value.averageScore)(Ordering[Double].reverse)
     } else {
@@ -73,12 +85,16 @@ class API(streamApp: KafkaStreams){
     }
     val topTenMovies = sortedList.take(10)
     val resObject = topTenMovies.map { movie =>
-      val movieTitle = moviesTitles.get(movie.key)
-      new MovieAverageScore(id = movie.key, title = movieTitle, score = (movie.value.sum / movie.value.count))
+      new MovieAverageScore(id = movie.key._1, title = movie.key._2, score = (movie.value.sum / movie.value.count))
     }
     resObject
   }
 
+  /***
+   *
+   * @param best
+   * @return
+   */
   def tenBestOrWorseViews(best: Boolean): List[ViewsMovieStats] = {
     val parametersAllTimesViews = StoreQueryParameters.fromNameAndType(StreamProcessing.allTimeViewsCountStoreName, QueryableStoreTypes.keyValueStore[Long, Long]())
     val parametersMovieTitles = StoreQueryParameters.fromNameAndType(StreamProcessing.movieTitlesStoreName, QueryableStoreTypes.keyValueStore[Long, String]())

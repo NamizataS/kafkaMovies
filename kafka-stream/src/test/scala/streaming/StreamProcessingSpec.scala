@@ -113,9 +113,9 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
       val averageScore = viewWithScore.map(_.score).sum / viewWithScore.size
       (key, averageScore)
     }
-    val computedAverageScorePerMovies = testDriver.getKeyValueStore[Long, AverageScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
+    val computedAverageScorePerMovies = testDriver.getKeyValueStore[(Long, String), AverageScoreForMovie](StreamProcessing.allTimesTenBestAverageScoreStoreName)
     expectedAverageScorePerMovies.foreach { case (movie, averageScore) =>
-      assert(math.abs(computedAverageScorePerMovies.get(movie).averageScore - averageScore) < epsilon )
+      assert(math.abs(computedAverageScorePerMovies.get((movie, Utils.moviesTitles(movie.toInt))).averageScore - averageScore) < epsilon )
     }
     testDriver.close()
   }

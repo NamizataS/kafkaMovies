@@ -71,11 +71,7 @@ object StreamProcessing extends PlayJsonSupport {
     .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5L)).advanceBy(Duration.ofMinutes(1L)))
     .count()(Materialized.as(recentViewsPerCategoryCountStoreName))
 
-  //val averageScoreAllTimes: KTable[Long, AverageScoreForMovie] = likesTopicStream.groupBy((_, like) => like.id).aggregate[AverageScoreForMovie](initializer = AverageScoreForMovie.empty
-  //)(aggregator = { (_, like, agg) => agg.increment(like.score) })(Materialized.as(allTimesTenBestAverageScoreStoreName))
-
-
-  val averageScoreAllTimes: KTable[Long, AverageScoreForMovie] = viewsAndLikesStream.groupBy((_, viewWithScore) => viewWithScore._id).aggregate[AverageScoreForMovie](initializer = AverageScoreForMovie.empty
+  val averageScoreAllTimes: KTable[(Long, String), AverageScoreForMovie] = viewsAndLikesStream.groupBy((_, viewWithScore) => (viewWithScore._id, viewWithScore.title)).aggregate[AverageScoreForMovie](initializer = AverageScoreForMovie.empty
   )(aggregator = { (_, like, agg) => agg.increment(like.score) })(Materialized.as(allTimesTenBestAverageScoreStoreName))
 
   def run(): KafkaStreams = {
