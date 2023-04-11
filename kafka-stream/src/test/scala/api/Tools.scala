@@ -60,32 +60,17 @@ object Tools {
 
       insideGenerateEvents(countEvents, 0, List())
     }
-
-    def computeStartAndEndDate(currentTime: OffsetDateTime): (Instant, Instant) = {
-      val currentTimeEndsWith = currentTime.getMinute % 10
-      currentTimeEndsWith match {
-        case _ if currentTimeEndsWith == 0 || currentTimeEndsWith == 5 =>
-          val startDate = currentTime
-          val endDate = currentTime.plus(Duration.ofMinutes(5))
-          (startDate.toInstant, endDate.toInstant)
-        case endsWith => endsWith match {
-          case _ if endsWith < 5 =>
-            val startDate = currentTime.minus(Duration.ofMinutes(endsWith))
-            val endDate = startDate.plus(Duration.ofMinutes(5))
-            (startDate.toInstant, endDate.toInstant)
-          case _ =>
-            val differential = endsWith - 5
-            val startDate = currentTime.minus(Duration.ofMinutes(differential))
-            val endDate = startDate.plus(Duration.ofMinutes(5))
-            (startDate.toInstant, endDate.toInstant)
-        }
-      }
-    }
   }
 
   object Converters {
     implicit class ViewToTestRecord(view: View){
-      def toTestRecord(recordTimestamp: Instant): TestRecord[String, View] = new TestRecord[String, View](view.id.toString, view, recordTimestamp)
+      /***
+       *
+       * @param topic : name of the topic
+       * @param timestamp : timestamp of the record
+       * @param partition : partition to insert the record in
+       * @return a ProducerRecord to insert in Kafka
+       */
       def toRecord(topic: String, timestamp: Instant,partition:Int = 0): ProducerRecord[String, View] = new ProducerRecord[String, View](
         topic,
         partition,
@@ -96,7 +81,13 @@ object Tools {
     }
 
     implicit class LikesToTestRecord(like: Like){
-      def toTestRecord(recordTimestamp: Instant): TestRecord[String, Like] = new TestRecord[String, Like](like.id.toString, like, recordTimestamp)
+      /***
+       *
+       * @param topic : name of the topic
+       * @param timestamp : timestamp of the record
+       * @param partition : partition to insert the record in
+       * @return a ProducerRecord to insert in Kafka
+       */
       def toRecord(topic: String, timestamp: Instant, partition: Int = 0): ProducerRecord[String, Like] = {
         new ProducerRecord[String, Like](
         topic,

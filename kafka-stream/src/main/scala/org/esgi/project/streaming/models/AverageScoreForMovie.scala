@@ -3,24 +3,24 @@ package org.esgi.project.streaming.models
 import play.api.libs.json.{Json, OFormat}
 
 /***
- *
- * @param sum
- * @param count
- * @param averageScore
+ * Case class to compute the average score of a movie
+ * @param sum : sum of values
+ * @param count : number of values
+ * @param averageScore : current average
  */
 case class AverageScoreForMovie(sum: Double, count: Double, averageScore: Double){
   /***
-   *
-   * @param score
-   * @return
+   * Update the average score when a new score is found
+   * @param score : score we need to add
+   * @return : AverageScoreForMovie updated with new score
    */
-  def increment(score: Double): AverageScoreForMovie = this.copy(sum = this.sum + score, count = this.count + 1).computeMeanScore
+  def increment(score: Double): AverageScoreForMovie = this.copy(sum = this.sum + score, count = this.count + 1).computeAverageScore
 
   /***
-   *
-   * @return
+   * Compute the average score
+   * @return : AverageScoreForMovie with average computed and updated
    */
-  def computeMeanScore: AverageScoreForMovie = this.copy(averageScore = this.sum / this.count)
+  private def computeAverageScore: AverageScoreForMovie = this.copy(averageScore = this.sum / this.count)
 }
 
 object AverageScoreForMovie {
@@ -28,7 +28,7 @@ object AverageScoreForMovie {
 
   /***
    *
-   * @return
+   * @return : An empty AverageScoreForMovie
    */
   def empty: AverageScoreForMovie = AverageScoreForMovie(0, 0, 0)
 }

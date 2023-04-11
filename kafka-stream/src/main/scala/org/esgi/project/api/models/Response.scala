@@ -50,6 +50,13 @@ case class MovieAverageScore(id: Long, title: String, score: Double)
  */
 case class ViewsMovieStats(id: Long, title: String, views: Long)
 
+/***
+ * Case class for movies available in Kafka
+ * @param id : movie id
+ * @param title : movie title
+ */
+case class MoviesAvailable(id: Long, title: String)
+
 // implicits
 object StatsDetails {
   implicit val format: OFormat[StatsDetails] = Json.format[StatsDetails]
@@ -68,4 +75,8 @@ object MovieAverageScore{
 
 object ViewsMovieStats{
   implicit val format: OFormat[ViewsMovieStats] = Json.format[ViewsMovieStats]
+}
+
+object MoviesAvailable {
+  implicit val format: OFormat[MoviesAvailable] = Json.format[MoviesAvailable]
 }

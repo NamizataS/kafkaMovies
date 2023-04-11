@@ -9,7 +9,7 @@ import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig, Topology}
 import org.esgi.project.ConfigLoader
-import org.esgi.project.streaming.models.{AverageScoreForMovie, Like, LikeDeserializer, LikeSerializer, View, ViewDeserializer, ViewSerializer, ViewsWithScore}
+import org.esgi.project.streaming.models.{AverageScoreForMovie, Like, View, ViewsWithScore}
 
 import java.time.Duration
 import java.util.{Properties, UUID}

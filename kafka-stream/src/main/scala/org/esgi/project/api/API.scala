@@ -2,7 +2,7 @@ package org.esgi.project.api
 
 import org.apache.kafka.streams.{KafkaStreams, StoreQueryParameters}
 import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyKeyValueStore, ReadOnlyWindowStore}
-import org.esgi.project.api.models.{MovieAverageScore, Stats, StatsDetails, ViewsMovieStats, ViewsPerMovies}
+import org.esgi.project.api.models.{MovieAverageScore, MoviesAvailable, Stats, StatsDetails, ViewsMovieStats, ViewsPerMovies}
 import org.esgi.project.streaming.StreamProcessing
 import org.esgi.project.streaming.models.AverageScoreForMovie
 
@@ -70,7 +70,7 @@ class API(streamApp: KafkaStreams){
   }
 
   /***
-   *
+   * To get the movies with the top ten best of worse average score
    * @param best : boolean representing if we want the top 10 best or worse average scores
    * @return : List of top 10 average scores
    */
@@ -91,7 +91,7 @@ class API(streamApp: KafkaStreams){
   }
 
   /***
-   *
+   * To get the movies with the top 10 best or worse number of views
    * @param best : boolean representing if we want the top 10 best or worse number of views
    * @return : List of top 10 number of views
    */
@@ -112,6 +112,19 @@ class API(streamApp: KafkaStreams){
       val movieTitle = movieTitles.get(movie.key)
       new ViewsMovieStats(id = movie.key, title = movieTitle, views = movie.value)
     }
+    resObject
+  }
+
+  /***
+   * To get the movies available in Kafka
+   * @param count : How many movies we want to get from Kafka
+   * @return : List of the number of movies we wanted to get
+   */
+  def moviesAvailable(count: Int): List[MoviesAvailable] = {
+    val parametersMovieTitles = StoreQueryParameters.fromNameAndType(StreamProcessing.movieTitlesStoreName, QueryableStoreTypes.keyValueStore[Long, String]())
+    val movieTitles: ReadOnlyKeyValueStore[Long, String] = streamApp.store(parametersMovieTitles)
+    val resObject = movieTitles.all().asScala.toList.take(count).map(
+      movie => new MoviesAvailable(id = movie.key, title = movie.value))
     resObject
   }
 

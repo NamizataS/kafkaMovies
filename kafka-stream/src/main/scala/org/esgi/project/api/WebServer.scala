@@ -44,6 +44,13 @@ object WebServer extends PlayJsonSupport {
             api.tenBestOrWorseViews(false)
           )
         }
+      },
+      path("movies" / "list" / IntNumber) { count: Int =>
+        get {
+          complete(
+            api.moviesAvailable(count)
+          )
+        }
       }
     )
   }

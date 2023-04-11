@@ -12,13 +12,10 @@ import streaming.Tools.Models.GeneratedView
 import streaming.Tools.Utils
 import org.esgi.project.api.API
 import org.esgi.project.streaming.StreamProcessing
-import org.testcontainers.containers.KafkaContainer
-import org.testcontainers.utility.DockerImageName
 import org.apache.kafka.streams.scala.serialization.Serdes
 import org.esgi.project.api.models.{MovieAverageScore, Stats, StatsDetails, ViewsMovieStats, ViewsPerMovies}
 import io.github.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 
-import java.io.File
 import scala.jdk.CollectionConverters._
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.Properties
@@ -28,7 +25,6 @@ class APISpec extends AnyFunSuite with GivenWhenThen with BeforeAndAfterAll with
 
   implicit val config: EmbeddedKafkaConfig = EmbeddedKafkaConfig()
 
-  // val cluster = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.3.0"))
   var adminClient: AdminClient = _
   var streamApp: KafkaStreams = _
   var api: API = _
