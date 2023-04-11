@@ -4,24 +4,51 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore
-import org.esgi.project.api.models.{MeanLatencyForURLResponse, VisitCountResponse}
-import org.esgi.project.streaming.models.MeanLatencyForURL
+
 
 object WebServer extends PlayJsonSupport {
   def routes(streams: KafkaStreams): Route = {
+    val api = new API(streams)
     concat(
-      path("visits" / Segment) { period: String =>
+      path("movies" / LongNumber) { id: Long =>
         get {
           complete(
-            List(VisitCountResponse("", 0))
+            api.viewsPerMovies(id)
           )
         }
       },
-      path("latency" / "beginning") {
+      path("stats" / "ten" / "best" / "score"){
         get {
           complete(
-            List(MeanLatencyForURLResponse("", 0))
+            api.tenBestOrWorseAverageScore(true)
+          )
+        }
+      },
+      path("stats" / "ten" / "best" / "views"){
+        get{
+          complete(
+            api.tenBestOrWorseViews(true)
+          )
+        }
+      },
+      path("stats" / "ten" / "worst" / "score"){
+        get{
+          complete(
+            api.tenBestOrWorseAverageScore(false)
+          )
+        }
+      },
+      path("stats" / "ten" / "worst" / "views"){
+        get{
+          complete(
+            api.tenBestOrWorseViews(false)
+          )
+        }
+      },
+      path("movies" / "list" / IntNumber) { count: Int =>
+        get {
+          complete(
+            api.moviesAvailable(count)
           )
         }
       }
