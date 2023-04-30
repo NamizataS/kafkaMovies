@@ -182,7 +182,7 @@ class APISpec extends AnyFunSuite with GivenWhenThen with BeforeAndAfterAll with
     viewsProducer.close()
     likesProducer.close()
 
-    Then("check is worst score is good")
+    Then("check if worst score is good")
     val expectedWorstAverageScorePerMovies: List[MovieAverageScore] = events.map(event => new ViewsWithScore(event.view.id, event.view.title, event.like.score))
       .groupBy(viewWithScore => viewWithScore._id).map { case (key, viewWithScore) =>
       val averageScore = viewWithScore.map(_.score).sum / viewWithScore.size

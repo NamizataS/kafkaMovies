@@ -8,6 +8,7 @@ import org.esgi.project.streaming.models.AverageScoreForMovie
 
 import scala.jdk.CollectionConverters._
 import java.time.{Duration, OffsetDateTime, ZoneOffset}
+import scala.util.Random
 
 class API(streamApp: KafkaStreams){
   private val parametersMovieTitles = StoreQueryParameters.fromNameAndType(StreamProcessing.movieTitlesStoreName, QueryableStoreTypes.keyValueStore[Long, String]())
@@ -123,7 +124,7 @@ class API(streamApp: KafkaStreams){
   def moviesAvailable(count: Int): List[MoviesAvailable] = {
     val parametersMovieTitles = StoreQueryParameters.fromNameAndType(StreamProcessing.movieTitlesStoreName, QueryableStoreTypes.keyValueStore[Long, String]())
     val movieTitles: ReadOnlyKeyValueStore[Long, String] = streamApp.store(parametersMovieTitles)
-    val resObject = movieTitles.all().asScala.toList.take(count).map(
+    val resObject = Random.shuffle(movieTitles.all().asScala.toList).take(count).map(
       movie => new MoviesAvailable(id = movie.key, title = movie.value))
     resObject
   }

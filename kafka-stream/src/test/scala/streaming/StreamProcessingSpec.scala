@@ -81,7 +81,6 @@ class StreamProcessingSpec extends AnyFunSuite with GivenWhenThen with PlayJsonS
     val computedViewsPerMoviesAndCategoriesLastFiveMinutes: WindowStore[(Long, String), ValueAndTimestamp[Long]] = testDriver.getTimestampedWindowStore[(Long, String), Long](StreamProcessing.recentViewsPerCategoryCountStoreName)
     expectedViewsPerMoviesAndCategoriesLastFiveMinutes.foreach{ case (view, countView) =>
      val row = computedViewsPerMoviesAndCategoriesLastFiveMinutes.fetch(view, fiveMinutesAgo.toInstant, currentTime.toInstant).asScala.toList
-      computedViewsPerMoviesAndCategoriesLastFiveMinutes.fetch(view, fiveMinutesAgo.toInstant, currentTime.toInstant).asScala.toList.foreach(rw => println(s"id is ${view._1} and value is ${rw.value.value()}"))
       row.headOption match {
         case Some(row) => assert(row.value.value() == countView, s"Values did not match for movie id ${view._1} and category ${view._2} where $countView was expected and ${row.value.value()} ")
         case None => assert(false, s"No data for movie id num ${view._1} and category ${view._2}")
